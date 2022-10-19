@@ -1,10 +1,14 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 3/7: Commits
+
+I ran into an issue with the EduTools plugin not downloading files needed for testing the program.
+Otherwise, this isn't terribly challenging. This code is messy, but gets the job done.
+
 ### Stage 2/7: Git object types
 
-Program now asks for the .git directory and a hash value
-Then outputs header information `type:<type> length:<length>`
+So far just slightly modifying the first stage. Nothing spectacular to note.
 
 ### Stage 1/7: What is a Git object
 
-Not much to say here. Haven't had to read files in a while. Hopefully this teaches something valuable.
+Initial program asks for a git object location, then inflates and prints the result to output.
