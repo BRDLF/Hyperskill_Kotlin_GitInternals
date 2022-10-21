@@ -1,5 +1,11 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 6/7: Git Log
+
+added `log` command.
+
+`log` shows the commit history, providing committer, commit timestamp, and commit message.
+
 ### Stage 5/7: Branches
 
 Program now asks for directory, then for a command.

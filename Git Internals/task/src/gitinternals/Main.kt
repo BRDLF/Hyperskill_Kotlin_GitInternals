@@ -10,6 +10,8 @@ import java.util.zip.InflaterInputStream
 
 class GitInternals {
     private val separator = File.separator
+    private lateinit var dir: String
+
     private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
     private fun parseTree(rest: List<Byte>) {
         var varRest = rest
@@ -23,7 +25,7 @@ class GitInternals {
             varRest = varRest.drop(20)
         } while (anchor != -1)
     }
-    private fun parseCommit(block: String) {
+    private fun catFileCommit(block: String) {
         val lines = block.split("\n")
         var firstParent = true
         var inMessage = false
@@ -61,7 +63,7 @@ class GitInternals {
             }
         }
     }
-    private fun gitObjects(dir: String) {
+    private fun catFile() {
         println("Enter git object hash:")
         val objectHash = readln().run { "${take(2)}${separator}${substring(2)}" }
         val fp = "${dir}${separator}objects${separator}${objectHash}"
@@ -76,7 +78,7 @@ class GitInternals {
                 notHeader.forEach { print(it.toInt().toChar()) }
             }
             "COMMIT" -> {
-                parseCommit(notHeader.joinToString(""){ it.toInt().toChar().toString()})
+                catFileCommit(notHeader.joinToString(""){ it.toInt().toChar().toString() })
             }
             "TREE" -> {
                 parseTree(notHeader)
@@ -84,7 +86,60 @@ class GitInternals {
         }
     }
 
-    private fun listBranches(dir: String) {
+    private fun walkBranch(nextCommit: String) {
+        val parentCommits: MutableList<String> = mutableListOf(nextCommit)
+        do {
+            print("Commit: ${parentCommits.last()}")
+            val inMerge: Boolean
+            if (parentCommits.size > 1) {
+                inMerge = true
+                print(" (merged)")
+            }
+            else { inMerge = false }
+            println()
+
+            val hash = parentCommits.last().trimIndent().run { "${take(2)}${separator}${substring(2)}" }
+            parentCommits.removeAt(parentCommits.lastIndex)
+            val fp = "${dir}${separator}objects${separator}${hash}"
+            val iis = InflaterInputStream(FileInputStream(fp))
+            val commitLines = iis.readAllBytes().dropWhile { it.toInt() != 0 }.drop(1).joinToString("") { it.toInt().toChar().toString() }.split("\n")
+
+            var inCommitMessage = false
+            for (line in commitLines) {
+                val lineWords = line.split(" ")
+                when (lineWords.first()) {
+                    "parent" -> {
+                        if (!inMerge) {
+                            parentCommits.add(lineWords[1])
+                        }
+                    }
+                    "committer" -> {
+                        print("${lineWords[1]} ${lineWords[2].drop(1).dropLast(1)} commit timestamp: ")
+                        println(Instant.ofEpochSecond(lineWords[3].toLong()).atZone(ZoneOffset.of(lineWords[4])).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss xxx")))
+                    } //committerLine
+                    "" -> {
+                        if (!inCommitMessage) inCommitMessage = true
+                    }
+                    else -> if (inCommitMessage) println(line)
+                }
+            }
+            println()
+        } while (parentCommits.isNotEmpty())
+
+    }
+    private fun log() {
+        println("Enter branch name:")
+        val branchName = readln()
+        try{
+            val tip = File("${dir}${separator}refs${separator}heads${separator}${branchName}")
+            val nextCommit = tip.readText().trimIndent()
+
+            walkBranch(nextCommit)
+
+        } catch (e: FileNotFoundException) { println(e.message) }
+    }
+
+    private fun listBranches() {
         val head = File("${dir}${separator}HEAD").readLines().first().takeLastWhile { it.toString() != "/" }
         val branches = File("${dir}${separator}refs${separator}heads").listFiles()?.map { it.name }?: throw Exception("No branches found?")
         for (branch in branches) {
@@ -97,19 +152,19 @@ class GitInternals {
 
         try {
             println("Enter .git directory location:")
-            val directoryLocation = readln()
+            dir = readln()
 
             println("Enter command:")
             when (readln()) {
-                "list-branches" -> listBranches(directoryLocation)
-                "cat-file" -> gitObjects(directoryLocation)
+                "list-branches" -> listBranches()
+                "cat-file" -> catFile()
+                "log" -> log()
                 else -> throw Exception("Invalid command")
             }
         }catch (e: Exception) { println(e.message) }
     }
 
 }
-
 
 fun main() {
     GitInternals().begin()
