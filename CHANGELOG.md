@@ -1,5 +1,15 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 5/7: Branches
+
+Program now asks for directory, then for a command.
+The valid commands are `list-branches` & `cat-file`
+
+
+`list-branches` shows a list of the branches, indicating the current branch with a `*`
+
+`cat-file` behaves as the program did before, prompting for a hash and then displaying the contents of the associated git object.
+
 ### Stage 4/7: Trees
 
 Program now supports trees.
