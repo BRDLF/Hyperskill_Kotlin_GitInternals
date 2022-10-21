@@ -1,5 +1,12 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 5/7: Branches
+
+Finally did the needful and put things into an object. Definitely helps tidy things. \
+I could have chosen to make things static but decided that really isn't necessary for the scope of the tool. It mostly just adds global scope and complicates my job. \
+Besides reorganizing code, implementing the branch list wasn't terribly difficult. Neither was prompting separately for an action.
+A little upset, because i'm sure there's some perfect, elegant way for me to write this code, but I don't need it to be elegant I need it to work. I'm learning to be satisfied with that. (for now)
+
 ### Stage 4/7: Trees
 
 It seems tradition at this point to make a big rework halfway through the project. 
