@@ -1,5 +1,14 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 7/7: Full tree
+
+It's done now. I know I usually go on these big long asides about how it was, but it was miserable.
+I kept things sloppy in order to save time and rush the work, but I think the sloppiness may have cost me time overall, it's hard to say.
+There's not very good error handling, file separators are interpreted by OS in most cases but hardcoded as `/` for the `commit-tree` command due to testing requirements.
+
+It's a big mess, but it's done! I've finished the project (and also now, the course.) \
+Now, onto other things, hopefully ones that feel more meaningful.
+
 ### Stage 6/7: Git Log
 
 This is gross. I mean, it works but feels like I built it with paperclips. That's ok. I'm almost done.

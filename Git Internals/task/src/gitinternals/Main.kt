@@ -13,7 +13,7 @@ class GitInternals {
     private lateinit var dir: String
 
     private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
-    private fun parseTree(rest: List<Byte>) {
+    private fun catFileTree(rest: List<Byte>) {
         var varRest = rest
         do {
             val anchor = varRest.indexOf(0.toByte())
@@ -25,8 +25,8 @@ class GitInternals {
             varRest = varRest.drop(20)
         } while (anchor != -1)
     }
-    private fun catFileCommit(block: String) {
-        val lines = block.split("\n")
+    private fun catFileCommit(block: List<Byte>) {
+        val lines = block.joinToString(""){ it.toInt().toChar().toString() }.split("\n")
         var firstParent = true
         var inMessage = false
 
@@ -63,29 +63,6 @@ class GitInternals {
             }
         }
     }
-    private fun catFile() {
-        println("Enter git object hash:")
-        val objectHash = readln().run { "${take(2)}${separator}${substring(2)}" }
-        val fp = "${dir}${separator}objects${separator}${objectHash}"
-        val iis = InflaterInputStream(FileInputStream(fp))
-        val arrayBytes = iis.readAllBytes()
-        val header = arrayBytes.takeWhile { it.toInt() != 0 }.joinToString("") { it.toInt().toChar().toString() }
-        val notHeader = arrayBytes.dropWhile { it.toInt() != 0 }.drop(1)
-        val type = header.split(" ").first().uppercase()
-        println("*$type*")
-        when (type) {
-            "BLOB" -> {
-                notHeader.forEach { print(it.toInt().toChar()) }
-            }
-            "COMMIT" -> {
-                catFileCommit(notHeader.joinToString(""){ it.toInt().toChar().toString() })
-            }
-            "TREE" -> {
-                parseTree(notHeader)
-            }
-        }
-    }
-
     private fun walkBranch(nextCommit: String) {
         val parentCommits: MutableList<String> = mutableListOf(nextCommit)
         do {
@@ -127,6 +104,37 @@ class GitInternals {
         } while (parentCommits.isNotEmpty())
 
     }
+
+    private fun listBranches() {
+        val head = File("${dir}${separator}HEAD").readLines().first().takeLastWhile { it.toString() != "/" }
+        val branches = File("${dir}${separator}refs${separator}heads").listFiles()?.map { it.name }?: throw Exception("No branches found?")
+        for (branch in branches) {
+            print(if (branch == head) "*" else " ")
+            println(" $branch")
+        }
+    }
+    private fun catFile() {
+        println("Enter git object hash:")
+        val objectHash = readln().run { "${take(2)}${separator}${substring(2)}" }
+        val fp = "${dir}${separator}objects${separator}${objectHash}"
+        val iis = InflaterInputStream(FileInputStream(fp))
+        val arrayBytes = iis.readAllBytes()
+        val header = arrayBytes.takeWhile { it.toInt() != 0 }.joinToString("") { it.toInt().toChar().toString() }
+        val notHeader = arrayBytes.dropWhile { it.toInt() != 0 }.drop(1)
+        val type = header.split(" ").first().uppercase()
+        println("*$type*")
+        when (type) {
+            "BLOB" -> {
+                notHeader.forEach { print(it.toInt().toChar()) }
+            }
+            "COMMIT" -> {
+                catFileCommit(notHeader)
+            }
+            "TREE" -> {
+                catFileTree(notHeader)
+            }
+        }
+    }
     private fun log() {
         println("Enter branch name:")
         val branchName = readln()
@@ -138,14 +146,60 @@ class GitInternals {
 
         } catch (e: FileNotFoundException) { println(e.message) }
     }
-
-    private fun listBranches() {
-        val head = File("${dir}${separator}HEAD").readLines().first().takeLastWhile { it.toString() != "/" }
-        val branches = File("${dir}${separator}refs${separator}heads").listFiles()?.map { it.name }?: throw Exception("No branches found?")
-        for (branch in branches) {
-            print(if (branch == head) "*" else " ")
-            println(" $branch")
+    private fun commitTree() {
+        println("Enter commit-hash:")
+        val objectHash = readln().run { "${take(2)}${separator}${substring(2)}" }
+        val fp = "${dir}${separator}objects${separator}${objectHash}"
+        val iis = InflaterInputStream(FileInputStream(fp))
+        val arrayBytes = iis.readAllBytes()
+        val type = arrayBytes.takeWhile { it.toInt() != 0 }.joinToString("") { it.toInt().toChar().toString() }.split(" ").first().uppercase()
+        val notHeader = arrayBytes.dropWhile { it.toInt() != 0 }.drop(1)
+        when (type) {
+            "COMMIT" -> {
+                recurseTree(hash = findTree(notHeader))
+            }
+            else -> throw Exception("invalid commit-hash. Not a commit")
         }
+    }
+    private fun findTree(block: List<Byte>): String {
+        for (line in block.joinToString("") { it.toInt().toChar().toString() }.split("\n")) {
+            if (line.split(" ").first() == "tree") return line.split(" ")[1]
+        }
+        throw Exception("No tree in Commit")
+    }
+    private fun recurseTree(parent: String = "", ourName: String = "", hash: String) {
+        //if I'm a blob
+        //print our Name!
+        //if I'm a tree
+        //keep going
+        //  for each hash, run this program, if ourName isn't "", pass ourName${separator} as parent, filename as ourName, and the hash as the hash
+
+
+        val objectHash = hash.run { "${take(2)}${separator}${substring(2)}" }
+        val fp = "${dir}${separator}objects${separator}${objectHash}"
+        val iis = InflaterInputStream(FileInputStream(fp))
+        val arrayBytes = iis.readAllBytes()
+        val type = arrayBytes.takeWhile { it.toInt() != 0 }.joinToString("") { it.toInt().toChar().toString() }.split(" ").first().uppercase()
+        when (type) {
+            "BLOB" -> { println("$parent$ourName") }
+            "TREE" -> {
+                var varRest = arrayBytes.dropWhile { it.toInt() != 0 }.drop(1)
+                do {
+                    val anchor = varRest.indexOf(0.toByte())
+                    if (anchor == -1) continue
+                    val (_, filename) = varRest.take(anchor).joinToString("") { it.toInt().toChar().toString() }.split(" ")
+                    varRest = varRest.drop(anchor + 1)
+                    val sha = varRest.take(20).toByteArray().toHex()
+                    val tPP = if (ourName == "") "" else "$ourName/"
+                    recurseTree(parent = tPP, ourName = filename, hash = sha)
+                    varRest = varRest.drop(20)
+                } while (anchor != -1)
+            }
+        }
+
+
+
+
     }
 
     fun begin() {
@@ -159,6 +213,7 @@ class GitInternals {
                 "list-branches" -> listBranches()
                 "cat-file" -> catFile()
                 "log" -> log()
+                "commit-tree" -> commitTree()
                 else -> throw Exception("Invalid command")
             }
         }catch (e: Exception) { println(e.message) }

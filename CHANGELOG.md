@@ -1,5 +1,11 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 7/7: Full tree
+
+added `commit-tree` command.
+
+`commit-tree` takes the hash of a commit, and displays the full project tree
+
 ### Stage 6/7: Git Log
 
 added `log` command.
