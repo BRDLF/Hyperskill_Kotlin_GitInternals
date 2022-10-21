@@ -1,5 +1,9 @@
 # Hyperskill_Kotlin_GitInternals
 
+### Stage 6/7: Git Log
+
+This is gross. I mean, it works but feels like I built it with paperclips. That's ok. I'm almost done.
+
 ### Stage 5/7: Branches
 
 Finally did the needful and put things into an object. Definitely helps tidy things. \
